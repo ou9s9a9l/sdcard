@@ -624,7 +624,11 @@ unsigned char rxdata(void)
 	unsigned char testbuffer[5]={"123"};
 
 //		TIMSK&=~(1<<TOIE2);
-		L01_CE_LOW( );                                                                                                                       
+		L01_CE_LOW( ); 
+		L01_Init();
+	    L01_SetTRMode( RX_MODE );
+		L01_WriteHoppingPoint( 0 );    
+		                                                                                                                      
 		L01_FlushRX( );
         L01_FlushTX( );
 		L01_CE_HIGH( );	// CE = 1,Æô¶¯·¢Éä
@@ -653,7 +657,8 @@ unsigned char rxdata(void)
         }
 //		itcmp=L01_ReadSingleReg(0x09);
         L01_ClearIRQ( IRQ_ALL );
-       tem=(rxbuffer[2]-32)*100+(rxbuffer[3]-32)*10+rxbuffer[4]-32;
+    //   tem=(rxbuffer[2]-32)*100+(rxbuffer[3]-32)*10+rxbuffer[4]-32;
+	   tem=rxbuffer[4];
 	   return tem;
 
 }

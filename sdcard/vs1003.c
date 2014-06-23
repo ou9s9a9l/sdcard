@@ -12,9 +12,20 @@
  * 
  */
  
-#include "vs1003.h"																		---------change----------
+#include "vs1003.h"
+//#include "MusicDataMP3.c"																			---------change----------
 #include <avr/io.h>
 #include "macr.h"
+//#include "oled.h"
+//#include "sdcard.c"
+#include "sdcard.h"
+#ifndef F_CPU
+#define F_CPU 4000000
+#endif
+#include <util/delay.h>
+#include "nRF24L01.h"
+#include "nRF24L01_Reg.h"
+//#include <intrins.h>
 
 #define uchar unsigned char
 #define uint unsigned int
@@ -30,6 +41,27 @@ void Mp3DeselectControl()  { MP3_XCS = 1; }
 void Mp3SelectData()		{ MP3_XDCS = 0; }
 void Mp3DeselectData()	{ MP3_XDCS = 1; }
 
+#define Storage 32768//8g
+//unsigned char lux[5]={32,32,32,32,32};
+unsigned char lux[512]={1,1,1,1,1,1,1,1,1,11,1,1,1,1,1,1,1,1,1,11,1,1,1,1,1,1,1,11,1,1};
+unsigned char tar[32]={32,32,32,32,32,32,32};
+unsigned char save[32]={0};
+volatile unsigned int value;
+unsigned int high=0xffff,low=0xaaaa,delay_a=0;
+ long b,a;
+
+//针对SD卡读写板调整引脚
+#define uint8 unsigned char
+
+void LCD_write_english_string(unsigned char X,unsigned char Y,char *s);
+
+//#define SPIWait()	{ while((S0SPSR & 0x80) == 0); }//等待SPI将数据发送完毕
+
+//#define SPI_RESULT_BYTE  S0SPDR
+
+//extern long volatile timeval; //用于延时的全局变量
+//1ms Delayfunction
+//void Delay(uchar ucDelayCount)
 void wait(uchar ucDelayCount)
 {
 	uchar ucTempCount;
@@ -83,9 +115,29 @@ void  MSPI_Init(void)
 void  InitPortVS1003(void)
 {
 	MSPI_Init();//SPI口的初始化
+//	IODIR &= 0xfffeffff;   //其他接口线的设置，其中dreq 为输入口
+//	IODIR |= MP3_XRESET | MP3_XCS | MP3_XDCS;//xRESET，xCS，xDS均为输出口
+//	IOSET |= MP3_XRESET | MP3_XCS | MP3_XDCS;//xRESET，xCS，xDS默认输出高电平	
+//	MP3_DREQ = 1;		//置为输入
+
+//	MP3_XRESET = 1;
 	MP3_XCS = 1;
 	MP3_XDCS = 0;
 }
+
+//uint8 SD_SPI_ReadByte(void);
+//void SD_SPI_WriteByte(uint8 ucSendData);
+
+//#define SPI_RecByte()  SD_SPI_ReadByte()
+//#define SPIPutChar(x) SD_SPI_WriteByte(x)
+
+
+/**********************************************************/
+/*  函数名称 :  SPIPutChar                                */
+/*  函数功能 ： 通过SPI发送一个字节的数据                 */
+/*  参数     :  待发送的字节数据                          */
+/*  返回值   :  无                                        */
+/*--------------------------------------------------------*/
 
 
 /*******************************************************************************************************************
@@ -188,15 +240,15 @@ void Mp3SoftReset(void)
 void Mp3Reset(void)
 {	
 	Mp3PutInReset();//xReset = 0   复位vs1003      
-	wait(200);//wait(200);//延时100ms
+	_delay_ms(100);//wait(200);//延时100ms
 	SPIPutChar(0xff);//发送一个字节的无效数据，启动SPI传输
 	Mp3DeselectControl();   //xCS = 1
 	Mp3DeselectData();     //xDCS = 1
 	Mp3ReleaseFromReset(); //xRESET = 1
-	wait(200);//wait(200);            //延时100ms
+	_delay_ms(100);//wait(200);            //延时100ms
 	while (MP3_DREQ == 0);//等待DREQ为高
 
-   wait(200);//wait(200);            //延时100ms
+    _delay_ms(100);//wait(200);            //延时100ms
  //	Mp3SetVolume(50,50);                                            ---------------change-------------------
     Mp3SoftReset();//vs1003软复位
 }
@@ -219,7 +271,7 @@ uchar CheckVS1003B_DRQ(void)
 /*---------------------------------------------------------*/
 void VsSineTest(void)
 {
-
+	volatile unsigned int b;
 	Mp3PutInReset();  //xReset = 0   复位vs1003
 	wait(200);        //延时100ms        
 	SPIPutChar(0xff);//发送一个字节的无效数据，启动SPI传输
@@ -230,6 +282,7 @@ void VsSineTest(void)
 //	Mp3SetVolume(50,50);                                             ---------------change-------------------
 
  	Mp3WriteRegister(SPI_MODE,0x08,0x20);//进入vs1003的测试模式
+	b=Mp3ReadRegister(SPI_MODE);
        	while (MP3_DREQ == 0);     //等待DREQ为高
  	Mp3SelectData();       //xDCS = 1，选择vs1003的数据接口
  	
@@ -326,7 +379,21 @@ void VS1003B_WriteCMD(unsigned char addr, unsigned int dat)
 //读寄存器，参数 地址 返回内容
 unsigned int VS1003B_ReadCMD(unsigned char addr)
 {
-
+/*
+	unsigned int temp;
+	unsigned char temp1;
+	VS1003B_XDCS_H();
+	VS1003B_XCS_L();
+	VS1003B_WriteByte(0x03);
+	//delay_Nus(20);
+	VS1003B_WriteByte(addr);
+	temp=  VS1003B_ReadByte();
+	temp=temp<<8;
+	temp1= VS1003B_ReadByte();
+	temp=temp|temp1;;
+	VS1003B_XCS_H();
+	return temp;
+*/
 	return(Mp3ReadRegister(addr));
 }
 
@@ -431,7 +498,7 @@ void VS1003B_SoftReset()
 	wait(2);
 }
 
-void VS1003B_Fill2048Zero(void)
+void VS1003B_Fill2048Zero()
 {
 	unsigned char i,j;
 
@@ -450,9 +517,120 @@ void VS1003B_Fill2048Zero(void)
 		}
 	}
 }
+
+
+/*void test_1003_PlayMP3File() 
+{
+   unsigned int data_pointer;unsigned char i;
+	unsigned int uiCount;
+
+	uiCount =b;
+	data_pointer=0; 
+	VS1003B_SoftReset();
+    while(uiCount>0)
+  	{ 
+		
+	   if(CheckVS1003B_DRQ())
+      	{
+    		for(i=0;i<32;i++)
+           	{
+     			VS1003B_WriteDAT(MusicData[data_pointer]);
+     			data_pointer++;
+            }
+			uiCount -= 32;
+         }
+    }
+	VS1003B_Fill2048Zero();
+}*/
+
+struct string{ 
+
+        char name[11]; 
+		char attri;
+		char leave[8];
+		uint high;
+		char leave1[4];
+		uint low;
+		
+        unsigned long length; 
+	
+
+     }; 
+	 #define  OPEN_PTT _PB4=0;
+	 #define  CLOSE_PTT _PB4=1;
+///                         判断有用的信息在哪回复序号1-16              //////////////////////
+//////////////////////播放第N首歌曲
+struct string  *stu; 
+void VS1003B_WriteMusic()
+{
+    volatile unsigned int data_pointer,i,j,flag;
+	volatile unsigned long sector_pointer,len;
+	data_pointer=0; 
+	sector_pointer=32752+(stu->low*8);//65544 65520
+	MP3_XDCS=0;
+	b=0;
+	len=stu->length;
+	while(len>512)//len>2000
+  	{ 
+	
+//		SD_Read_Sector(b++,lux);
+//		_PB6=1;_PC6=1;
+//		Init_SPI();	
+		SD_Read_Sector(sector_pointer,lux);
+		b=sector_pointer;
+		sector_pointer++;
+		// 写一个扇区
+		
+ 	 	for(i=0;i<16;i++)
+      	{
+			while(flag==0)
+			{
+				if(MP3_DREQ)
+      			{
+					for(j=0;j<32;j++)
+     					{
+						VS1003B_WriteDAT(lux[data_pointer]);
+     					data_pointer++;
+						}
+				flag++;
+            	}
+			
+
+		     }
+			flag=0;		
+			 
+         }
+		 	len -= 512;
+			data_pointer=0; 
+			
+    }
+	
+	VS1003B_Fill2048Zero();
+}
+
+
+
+///////////////////////      放到target中  返回后面还有几个文件的数据        ///////////////////////////
+uchar  transfer(unsigned char *target,unsigned char *buffer,unsigned char line)
+{
+	volatile unsigned char j,temp=0;
+	volatile unsigned int length,i;
+	length=32*line;//2排32个字节为一个文件
+	for(i=0;i<length;i++)
+	{
+	*buffer++;
+	}
+
+	for(j=0;j<32;j++)
+	{
+	target[j]=buffer[j];
+	}	
+	
+	
+}
 void SetVolume(uint uiVolumeCount)
 {
-	uiVolumeCount|=uiVolumeCount<<8;
+	uiVolumeCount|=uiVolumeCount<<8;	
 	uchar retry=0;
 	while(VS1003B_ReadCMD(0x0b) != uiVolumeCount)//设音量
 	{
@@ -461,31 +639,209 @@ void SetVolume(uint uiVolumeCount)
 	}
 }
 
+		
+
+uchar WriteVoice(volatile uchar Number,uchar Volume)
+{
+		
+		
+		volatile uchar b,c=0;volatile uchar k=0,itmp,flag=0;
+		volatile uint temp=Storage;
+		stu=( struct string *)save;
+		// 分析Number
+		_delay_ms(200);//不能大于400
+			itmp = Number; 
+            tar[0] = ( itmp / 100 )+48;
+            itmp %= 100;
+            tar[1] = ( itmp / 10 )+48;
+            itmp %= 10;
+            tar[2] = itmp+48;
+       if(tar[0]==48)// 除去名字前面的0
+	   for(c=0;c<3;c++)
+	   tar[c]=tar[c+1];
+	   if(tar[0]==48)
+	   for(c=0;c<3;c++)
+	   tar[c]=tar[c+1];
+	 //读取前128个mp3的具体信息并且查找和Number一样的
+
+	for(b=0;b<8;b++)//最开始的8个簇
+	{	
+		SD_Read_Sector(temp++,lux);
+		if(1==flag)break;
+		for(k=0;k<16;k++)//每一个簇的16个文件
+		{
+		transfer(save,lux,k);
+		if(tar[0]==stu->name[0]&&tar[1]==stu->name[1]&&tar[2]==stu->name[2])
+		{flag=1;break;}
+		}
+	}	
+	
+
+	
+		InitPortVS1003();
+		SetVolume(Volume);
+		VS1003B_WriteMusic();
+		_delay_ms(200);//确定播放完毕
+
+		if(1==flag)	return 0;
+		else return 1;
+}
+
 void VS1003B_WriteDAT(unsigned char dat)
 {
-	//	VS1003B_XDCS_L();
-	//	VS1003B_WriteByte(dat);
-	//	VS1003B_XDCS_H();
-	//	VS1003B_XCS_H();
+//	VS1003B_XDCS_L();
+//	VS1003B_WriteByte(dat);
+//	VS1003B_XDCS_H();
+//	VS1003B_XCS_H();
 
-	Mp3SelectData();
+   	Mp3SelectData();
 	SPIPutChar(dat);
-	//	SPIPutChar(dat);
+//	SPIPutChar(dat);
 	Mp3DeselectData();
 	Mp3DeselectControl();
 
 }
 void SPIPutChar(unsigned char ucSendData)
-{
-	unsigned char clear;
-	SPDR=ucSendData;
-	while(!(SPSR&(1<<SPIF)));
-	clear=SPSR;
-	//return SPDR ;
+{      
+unsigned char clear;
+SPDR=ucSendData;
+while(!(SPSR&(1<<SPIF)));
+clear=SPSR;  
+//return SPDR ;
 }
 
 
+#define WT_CLK _PB7
+#define WT_DI _PB5
+#define WT_DO _PB6
+unsigned long int WTH_2L(unsigned long int dat)
+{
+	unsigned char i;
+	unsigned long int return_dat;
+	
+	WT_CLK = 1;
+	_delay_us(100);
+	for (i = 0; i < 24; i++)
+	{
+		WT_CLK = 1;
+		if (dat & 0x800000) WT_DI=1;
+		else WT_DI=0;
+		dat <<= 1;
+		_delay_us(50);  //50us
+		
+		if (WT_DO) return_dat |= 0x01;
+		else return_dat &= ~(0x01);
+		return_dat <<= 1;
+		_delay_us(50);  //50us
+		WT_CLK = 0;
+		_delay_us(100); //100us
+	}
+	_delay_us(50);      //50us
+	if (WT_DO) return_dat |= 0x01;
+	else return_dat &= ~(0x01);
+	return_dat &= 0x7ffffe;     //屏蔽前后无用的数据
+	
+	return return_dat;
+}
+
+unsigned char Play_voice(unsigned char addr)
+{
+	unsigned long int dat;
+	dat = 0x1800c8 + (addr << 5);
+	if (WTH_2L(dat) == dat) return  1;   //播放成功
+	return 0;        //播放失败
+}
+
+unsigned char WTH_Check_sate(void)
+{
+	unsigned char i;
+	unsigned long int dat = 0x2200;
+	unsigned long int return_dat;
+	
+	WT_CLK = 1;
+	_delay_us(200);
+	for (i = 0; i < 16; i++)
+	{
+		WT_CLK = 1;
+		if (dat & 0x8000) WT_DI = 1;
+		else WT_DI = 0;
+		dat <<= 1;
+		_delay_us(50);  //等待 50us 后才读取 DO 数据
+		if (WT_DO) return_dat |= 0x01;
+		else return_dat &= ~(0x01);
+		return_dat <<= 1;
+		
+		_delay_us(50);  //50us
+		WT_CLK = 0;
+		_delay_us(100); //100us
+	}
+	if (WT_DO) return_dat |= 0x01;
+	
+	return_dat &= 0xffff;
+	  if (return_dat & 0x80) //只判断第 9 位数据
+	  return 1;       //正在播放
+	  return 0;            //未播放
+}	  
+
+unsigned int value_rx[2]={};
+unsigned char rxbuffer[32] = {0};
+unsigned char luj[6]={32,32,32,32,33};
+volatile uint sector1=0;
+void main(void)
+{
+		Init_MCU();
+		Init_SPI();
+		L01_CE_LOW( );
+		L01_Init();
+		L01_SetTRMode( RX_MODE );
+		L01_WriteHoppingPoint( 0 );
+		value=SD_Init();
+		Init_SPI_HIGH();
+		DREQ=0;	//dreq
+		stu=( struct string *)save;
+		SD_Read_Sector(0,lux);
+		SD_Read_Sector(32775,lux);
+		transfer(save,lux,15);	 
+		sector1=32752+(stu->low*8)+stu->length/4096*8+8;
+		SD_Read_Sector(sector1,lux);
+		Mp3Reset();
+	//	_delay_ms(1000);
+		while(1)
+		{    
+	
+		                              //---------------change-------------------
+			rxdata();
+			OPEN_PTT
+			_delay_ms(500);//确保开启
+			if(rxbuffer[2]!=0)WriteVoice(rxbuffer[2],0);//?С????? value_rx[1]
+			if(rxbuffer[0]!=0)WriteVoice(rxbuffer[0],0);
+			if(rxbuffer[1]!=0)WriteVoice(rxbuffer[1],0);
+			CLOSE_PTT
+	}
+}
+
+//VsSineTest();
+//Mp3Reset();
 
 
 
 
+
+/*	if(rxbuffer[4]!=32)
+	i++;
+	 itmp = value;
+            testbuffer[0] = ( itmp / 10000 ) + '0'-16;
+            itmp %= 10000;
+            testbuffer[1] = ( itmp / 1000 ) + '0'-16;
+            itmp %= 1000;
+            testbuffer[2] = ( itmp / 100 ) + '0'-16;
+            itmp %= 100;
+            testbuffer[3] = ( itmp / 10 ) + '0'-16;
+            itmp %= 10;
+            testbuffer[4] = itmp + '0'-16;
+            testbuffer[5] = 0;
+			_PD3=0;
+		if(rxbuffer[4]!=32||rxbuffer[3]!=32||rxbuffer[2]!=32)*/
+//		LCD_Dis_Str( 6, 50, (char*)rxbuffer );
+//		LCD_Dis_Str( 4, 50, (char*)testbuffer );
+//	value=WriteVoice(3,20);

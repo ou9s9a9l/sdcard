@@ -1,6 +1,6 @@
 #ifndef VS10XX_H
 #define VS10XX_H
-#endif
+
 /* Include processor definition */
 //#include <msp430x14x.h>
 
@@ -83,13 +83,8 @@ void VS_Send_Dat(unsigned char dat); //向VS1003发送音频数据
 void VS_Flush_Buffer(); //清空VS1003的数据缓冲区
 void VS_sin_test(unsigned char x); //正弦测试
 void LoadPatch(); //为VS1003打补丁
-void VS1003B_WriteDAT(unsigned char dat);
-void VS1003B_Fill2048Zero(void);
-void  InitPortVS1003(void);
-void SetVolume(unsigned int uiVolumeCount);
-void Mp3Reset(void);
-void SPIPutChar(unsigned char ucSendData);
 
+#endif
 
 #define vs1003_c      0
 #if vs1003_c==1

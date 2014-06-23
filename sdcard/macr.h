@@ -29,13 +29,7 @@
 *------------------*/
     /*Data type definations*/  
 
-#define uchar unsigned char
-#define uint unsigned int
-#define ulong unsigned long
-#ifndef F_CPU
-#define F_CPU 4000000
-#endif
-#include <util/delay.h>
+
 /*------------------*
 *   功 能 宏 定 义  *
 *------------------*/

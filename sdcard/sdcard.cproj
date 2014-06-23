@@ -36,7 +36,7 @@
       </OverrideVtorValue>
       <Channel>
         <host>127.0.0.1</host>
-        <port>49327</port>
+        <port>52055</port>
         <ssl>False</ssl>
       </Channel>
     </com_atmel_avrdbg_tool_simulator>
@@ -50,15 +50,15 @@
       </OverrideVtorValue>
       <Channel>
         <host>127.0.0.1</host>
-        <port>49327</port>
+        <port>52055</port>
         <ssl>False</ssl>
       </Channel>
       <ToolOptions>
         <InterfaceName>JTAG</InterfaceName>
         <InterfaceProperties>
-          <JtagDbgClock>150000</JtagDbgClock>
+          <JtagDbgClock>250000</JtagDbgClock>
           <JtagProgClock>1000000</JtagProgClock>
-          <IspClock>150000</IspClock>
+          <IspClock>250000</IspClock>
           <JtagInChain>false</JtagInChain>
           <JtagEnableExtResetOnStartSession>true</JtagEnableExtResetOnStartSession>
           <JtagDevicesBefore>0</JtagDevicesBefore>
@@ -144,6 +144,9 @@
     <OutputType>Executable</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="font.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="macr.h">
       <SubType>compile</SubType>
     </Compile>
@@ -159,16 +162,16 @@
     <Compile Include="nRF24L01_Reg.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="OLED.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OLED.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="sdcard.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="sdcard.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="sound.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="sound.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="vs1003.c">
