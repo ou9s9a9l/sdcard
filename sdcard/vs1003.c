@@ -556,8 +556,8 @@ struct string{
 	
 
      }; 
-	 #define  OPEN_PTT _PB4=0;
-	 #define  CLOSE_PTT _PB4=1;
+	 #define  OPEN_PTT _PB3=0;
+	 #define  CLOSE_PTT _PB3=1;
 ///                         判断有用的信息在哪回复序号1-16              //////////////////////
 //////////////////////播放第N首歌曲
 struct string  *stu; 
@@ -805,7 +805,10 @@ void main(void)
 		sector1=32752+(stu->low*8)+stu->length/4096*8+8;
 		SD_Read_Sector(sector1,lux);
 		Mp3Reset();
+		OPEN_PTT
+		WriteVoice(1,0);
 	//	_delay_ms(1000);
+		CLOSE_PTT
 		while(1)
 		{    
 	
@@ -813,9 +816,9 @@ void main(void)
 			rxdata();
 			OPEN_PTT
 			_delay_ms(500);//确保开启
-			if(rxbuffer[2]!=0)WriteVoice(rxbuffer[2],0);//?С????? value_rx[1]
-			if(rxbuffer[0]!=0)WriteVoice(rxbuffer[0],0);
-			if(rxbuffer[1]!=0)WriteVoice(rxbuffer[1],0);
+			if(rxbuffer[2]!=0)WriteVoice(rxbuffer[2],20);//?С????? value_rx[1]
+			if(rxbuffer[0]!=0)WriteVoice(rxbuffer[0],20);
+			if(rxbuffer[1]!=0)WriteVoice(rxbuffer[1],20);
 			CLOSE_PTT
 	}
 }
