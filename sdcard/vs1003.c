@@ -33,7 +33,7 @@
 #define bool bit
 #define true 1
 #define flase 0
- 
+ volatile ulong sector1=0;
 void Mp3PutInReset()  { MP3_XRESET = 0; }
 void Mp3ReleaseFromReset()  { MP3_XRESET =1; }
 void Mp3SelectControl()  { MP3_XCS = 0; }
@@ -639,7 +639,7 @@ void SetVolume(uint uiVolumeCount)
 	}
 }
 
-		
+	
 
 uchar WriteVoice(volatile uchar Number,uchar Volume)
 {
@@ -675,7 +675,18 @@ uchar WriteVoice(volatile uchar Number,uchar Volume)
 		{flag=1;break;}
 		}
 	}	
-	
+	temp=sector1;
+	for(b=0;b<8;b++)//最开始的8个簇
+	{	
+		SD_Read_Sector(temp++,lux);
+		if(1==flag)break;
+		for(k=0;k<16;k++)//每一个簇的16个文件
+		{
+		transfer(save,lux,k);
+		if(tar[0]==stu->name[0]&&tar[1]==stu->name[1]&&tar[2]==stu->name[2])
+		{flag=1;break;}
+		}
+	}	
 
 	
 		InitPortVS1003();
@@ -786,7 +797,7 @@ unsigned char WTH_Check_sate(void)
 unsigned int value_rx[2]={};
 unsigned char rxbuffer[32] = {0};
 unsigned char luj[6]={32,32,32,32,33};
-volatile uint sector1=0;
+
 void main(void)
 {
 		Init_MCU();
@@ -799,20 +810,30 @@ void main(void)
 		Init_SPI_HIGH();
 		DREQ=0;	//dreq
 		stu=( struct string *)save;
+		SD_write_sector(2,lux);
+		for (int a=0;a<20;a++)
+		lux[a]=0;
+		
+		
+		SD_Read_Sector(4,lux);
 		SD_Read_Sector(0,lux);
+		SD_Read_Sector(Storage,lux);
 		SD_Read_Sector(32775,lux);
+		
 		transfer(save,lux,15);	 
 		sector1=32752+(stu->low*8)+stu->length/4096*8+8;
 		SD_Read_Sector(sector1,lux);
 		Mp3Reset();
 		OPEN_PTT
-		WriteVoice(1,0);
-	//	_delay_ms(1000);
+		WriteVoice(253,0);
+		_delay_ms(3000);
+		WriteVoice(254,0);
+		_delay_ms(3000);
 		CLOSE_PTT
 		while(1)
 		{    
 	
-		                              //---------------change-------------------
+//---------------change-----------------
 			rxdata();
 			OPEN_PTT
 			_delay_ms(500);//确保开启
