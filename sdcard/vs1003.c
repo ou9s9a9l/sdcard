@@ -800,7 +800,7 @@ unsigned char luj[6]={32,32,32,32,33};
 
 void main(void)
 {
-		Init_MCU();
+ 		Init_MCU();
 		Init_SPI();
 		L01_CE_LOW( );
 		L01_Init();
@@ -810,10 +810,17 @@ void main(void)
 		Init_SPI_HIGH();
 		DREQ=0;	//dreq
 		stu=( struct string *)save;
-		SD_write_sector(2,lux);
-		for (int a=0;a<20;a++)
-		lux[a]=0;
 		
+	//	for (int a=0;a<20;a++)
+	//	lux[a]=0;
+	
+		if(value==0)
+		{
+		/*SD_write_sector(0,lux);
+		SD_write_sector(1,lux);
+		SD_write_sector(2,lux);
+		SD_write_sector(3,lux);
+		SD_write_sector(4,lux);*/
 		
 		SD_Read_Sector(4,lux);
 		SD_Read_Sector(0,lux);
@@ -825,11 +832,12 @@ void main(void)
 		SD_Read_Sector(sector1,lux);
 		Mp3Reset();
 		OPEN_PTT
+		
 		WriteVoice(253,0);
-		_delay_ms(3000);
+		_delay_ms(1000);
 		WriteVoice(254,0);
 		_delay_ms(3000);
-		CLOSE_PTT
+		CLOSE_PTT}
 		while(1)
 		{    
 	
@@ -837,9 +845,12 @@ void main(void)
 			rxdata();
 			OPEN_PTT
 			_delay_ms(500);//È·±£¿ªÆô
+			if(value==0)
+			{
 			if(rxbuffer[2]!=0)WriteVoice(rxbuffer[2],20);//?§³????? value_rx[1]
 			if(rxbuffer[0]!=0)WriteVoice(rxbuffer[0],20);
 			if(rxbuffer[1]!=0)WriteVoice(rxbuffer[1],20);
+			}
 			CLOSE_PTT
 	}
 }

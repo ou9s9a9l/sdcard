@@ -92,7 +92,7 @@ Output: 1:CE=1, 0:CE=0
 */
 unsigned char L01_GetCEStatus( void )
 {
-	return _PB2;
+	return _PA5;
 }
 /*
 ================================================================================
@@ -604,7 +604,7 @@ void L01_Init( void )
 	L01_SetPowerUp( );
 	tmp=L01_ReadSingleReg(L01REG_FEATRUE);
 	tmp=L01_ReadSingleReg(L01REG_RF_SETUP);
-	tmp=L01_ReadSingleReg(L01REG_CONFIG);
+	//tmp=L01_ReadSingleReg(L01REG_CONFIG);
 	irq=0;
 }
 /*
